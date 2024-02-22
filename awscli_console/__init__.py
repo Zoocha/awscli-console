@@ -51,8 +51,9 @@ def get_logout_url(redirect_uri: str) -> str:
 def main():
     parser = argparse.ArgumentParser(description="Log into the AWS console using AWS CLI credentials")
     parser.add_argument("--profile", dest="profile", help="Profile to log into")
-    parser.add_argument("--no-browser", dest="no_browser", help="Don't try to open the URL in your browser", action=argparse.BooleanOptionalAction)
+    parser.add_argument("--no-browser", dest="browser", help="Don't open the URL in your browser", action="store_false")
     args = parser.parse_args()
+    print(args)
 
     session = get_session(args.profile)
     credentials = get_credentials(session)
@@ -61,6 +62,6 @@ def main():
     logout_url = get_logout_url(login_url)
 
     print(logout_url)
-    if not args.no_browser:
+    if args.browser:
         print("Opening URL in your browser...", file=sys.stderr)
         webbrowser.open(logout_url)
