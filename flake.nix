@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.05";
     systems.url = "github:nix-systems/default";
   };
 
@@ -16,17 +16,19 @@
           pkgs = nixpkgs.legacyPackages.${system};
         });
   in rec {
-    packages = forAllSystems ({pkgs, ...}: let
-      inherit (pkgs.python3Packages) buildPythonApplication setuptools requests boto3;
-    in {
-      default = buildPythonApplication {
+    packages = forAllSystems ({pkgs, ...}: rec {
+      default = pkgs.python3Packages.buildPythonPackage {
         pname = "aws-console";
         version = self.lastModifiedDate;
         pyproject = true;
         src = ./.;
-        nativeBuildInputs = [setuptools];
-        propagatedBuildInputs = [requests boto3];
+        nativeBuildInputs = with pkgs.python3Packages; [setuptools];
+        propagatedBuildInputs = with pkgs.python3Packages; [requests boto3];
+        doCheck = false;
       };
+      # AWS CLI requires the full site-packages, but nix adds dependencies by
+      # patching, so build an env with them
+      plugin-env = pkgs.python3.withPackages (_: [default] ++ default.propagatedBuildInputs);
     });
     formatter = forAllSystems ({pkgs, ...}: pkgs.alejandra);
     hydraJobs = packages;
