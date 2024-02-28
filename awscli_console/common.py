@@ -30,12 +30,12 @@ def get_signin_token(credentials: botocore.credentials.Credentials) -> str:
     except requests.exceptions.HTTPError as e:
         raise Exception("Couldn't create token. Check that your credentials work with 'aws sts get-caller-identity'") from e
 
-def get_login_url(signin_token: str) -> str:
+def get_login_url(signin_token: str, region: str = "us-east-1") -> str:
     # For some reason, it HAS to be us-east-1
     return "https://us-east-1.signin.aws.amazon.com/federation?" + urllib.parse.urlencode({
         "Action": "login",
         "Issuer": "aws-switch-role",
-        "Destination": "https://console.aws.amazon.com",
+        "Destination": f"https://{region}.console.aws.amazon.com",
         "SigninToken": signin_token
     })
 
