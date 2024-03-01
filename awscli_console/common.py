@@ -15,10 +15,14 @@ def get_credentials(session: boto3.session.Session) -> botocore.credentials.Cred
     except AttributeError as e:
         raise Exception("Couldn't extract credentials, try specifying a profile with --profile=foo") from e
 
-def get_signin_token(credentials: botocore.credentials.Credentials) -> str:
+def get_signin_token(credentials: botocore.credentials.Credentials, duration: int = 43200) -> str:
+    print(duration)
+    if duration > 43200 or duration < 900:
+        raise Exception("The duration must be between 900s (15 minutes) and 43200s (12 hours).")
     try:
         req = requests.get("https://signin.aws.amazon.com/federation", params={
             "Action": "getSigninToken",
+            "SessionDuration": duration,
             "Session": json.dumps({
                 "sessionId": credentials.access_key,
                 "sessionKey": credentials.secret_key,
