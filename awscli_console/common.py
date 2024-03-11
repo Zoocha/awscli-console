@@ -9,30 +9,41 @@ def get_session(profile_name: str) -> boto3.session.Session:
     except botocore.exceptions.ProfileNotFound as e:
         raise Exception("Unknown profile. Try 'aws configure list-profiles'") from e
 
-def get_credentials(session: boto3.session.Session) -> botocore.credentials.Credentials:
+def get_role_maxduration(session: boto3.session.Session) -> int | None:
+    sts = session.client('sts')
+    iam = session.client('iam')
+
+    identity = sts.get_caller_identity()['Arn']
+    if 'assumed-role' in identity:
+        role = iam.get_role(RoleName=identity.split('/')[1])['Role']
+        # For some reason it has to be x-1
+        return (role['MaxSessionDuration'] - 1)
+    else:
+        return None
+
+def get_signin_token(session: boto3.session.Session, duration: int | None = None) -> str:
+    if duration == None:
+        # Try to get role's duration, if it's assumed-role
+        duration = get_role_maxduration(session)
+    elif duration > 43200 or duration < 900:
+        # Validate bounds
+        raise Exception("The duration must be between 900s (15 minutes) and 43200s (12 hours).")
+
     try:
-        return session.get_credentials().get_frozen_credentials()
+        credentials = session.get_credentials().get_frozen_credentials()
     except AttributeError as e:
         raise Exception("Couldn't extract credentials, try specifying a profile with --profile=foo") from e
-
-def get_signin_token(credentials: botocore.credentials.Credentials, duration: int = 43200) -> str:
-    print(duration)
-    if duration > 43200 or duration < 900:
-        raise Exception("The duration must be between 900s (15 minutes) and 43200s (12 hours).")
-    try:
-        req = requests.get("https://signin.aws.amazon.com/federation", params={
-            "Action": "getSigninToken",
-            "SessionDuration": duration,
-            "Session": json.dumps({
-                "sessionId": credentials.access_key,
-                "sessionKey": credentials.secret_key,
-                "sessionToken": credentials.token
-            })
+    req = requests.get("https://signin.aws.amazon.com/federation", params={
+        "Action": "getSigninToken",
+        "SessionDuration": duration,
+        "Session": json.dumps({
+            "sessionId": credentials.access_key,
+            "sessionKey": credentials.secret_key,
+            "sessionToken": credentials.token
         })
-        req.raise_for_status()
-        return json.loads(req.text)["SigninToken"]
-    except requests.exceptions.HTTPError as e:
-        raise Exception("Couldn't create token. Check that your credentials work with 'aws sts get-caller-identity'") from e
+    })
+    req.raise_for_status()
+    return json.loads(req.text)["SigninToken"]
 
 def get_login_url(signin_token: str, region: str = "us-east-1") -> str:
     # For some reason, it HAS to be us-east-1

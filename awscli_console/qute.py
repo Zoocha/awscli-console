@@ -32,8 +32,7 @@ def main():
         cmd(f":open -t {logout_url}")
 
     session = common.get_session(profile_name)
-    credentials = common.get_credentials(session)
-    signin_token = common.get_signin_token(credentials)
+    signin_token = common.get_signin_token(session)
     login_url = common.get_login_url(signin_token, session.region_name)
     cmd(f":open {login_url}")
 

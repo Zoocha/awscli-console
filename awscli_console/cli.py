@@ -1,16 +1,15 @@
 from awscli_console import common
-import argparse, sys, webbrowser
+import argparse, sys, webbrowser, requests
 
 def main():
     parser = argparse.ArgumentParser(description="Log into the AWS console using AWS CLI credentials")
     parser.add_argument("--profile", dest="profile", help="Profile to log into")
-    parser.add_argument("--duration", dest="duration", help="Console duration, in seconds. Defaults to 43200 (12 hours).", default=43200, type=int)
+    parser.add_argument("--duration", dest="duration", help="Console duration, in seconds. Defaults 1h (if supported by the account), or 1h if not.", type=int)
     parser.add_argument("--no-browser", dest="browser", help="Don't open the URL in your browser", action="store_false")
     args = parser.parse_args()
 
     session = common.get_session(args.profile)
-    credentials = common.get_credentials(session)
-    signin_token = common.get_signin_token(credentials, args.duration)
+    signin_token = common.get_signin_token(session, args.duration)
     login_url = common.get_login_url(signin_token, session.region_name)
     logout_url = common.get_logout_url(login_url)
 
