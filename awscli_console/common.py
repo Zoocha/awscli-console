@@ -9,6 +9,10 @@ def get_session(profile_name: str) -> boto3.session.Session:
     except botocore.exceptions.ProfileNotFound as e:
         raise Exception("Unknown profile. Try 'aws configure list-profiles'") from e
 
+def get_config_duration(session: boto3.session.Session) -> int | None:
+    duration = session._session.get_scoped_config().get('duration_seconds')
+    return int(duration) if duration else None
+
 def get_role_maxduration(session: boto3.session.Session) -> int | None:
     sts = session.client('sts')
     iam = session.client('iam')
@@ -22,11 +26,15 @@ def get_role_maxduration(session: boto3.session.Session) -> int | None:
         return None
 
 def get_signin_token(session: boto3.session.Session, duration: int | None = None) -> str:
+    # Try to get duration from config
     if duration == None:
-        # Try to get role's duration, if it's assumed-role
+        duration = get_config_duration(session)
+    # Try to get role's duration
+    if duration == None:
         duration = get_role_maxduration(session)
-    elif duration > 43200 or duration < 900:
-        # Validate bounds
+
+    # Validate bounds
+    if duration != None and (duration > 43200 or duration < 900):
         raise Exception("The duration must be between 900s (15 minutes) and 43200s (12 hours).")
 
     try:
