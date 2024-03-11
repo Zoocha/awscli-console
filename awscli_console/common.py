@@ -20,8 +20,7 @@ def get_role_maxduration(session: boto3.session.Session) -> int | None:
     identity = sts.get_caller_identity()['Arn']
     if 'assumed-role' in identity:
         role = iam.get_role(RoleName=identity.split('/')[1])['Role']
-        # For some reason it has to be x-1
-        return (role['MaxSessionDuration'] - 1)
+        return role['MaxSessionDuration']
     else:
         return None
 
@@ -34,8 +33,11 @@ def get_signin_token(session: boto3.session.Session, duration: int | None = None
         duration = get_role_maxduration(session)
 
     # Validate bounds
-    if duration != None and (duration > 43200 or duration < 900):
-        raise Exception("The duration must be between 900s (15 minutes) and 43200s (12 hours).")
+    if duration != None:
+        # For some reason, it sometimes is a non-inclusive limit
+        duration -= 1
+        if duration > 43200 or duration < 900:
+            raise Exception("The duration must be between 900s (15 minutes) and 43200s (12 hours).")
 
     try:
         credentials = session.get_credentials().get_frozen_credentials()
