@@ -8,17 +8,17 @@ works with it, works with this.
 
 I recommend pipx:
 ```
-pipx install git+https://github.com/misterio77/awscli-console
+pipx install git+https://github.com/zoocha/awscli-console
 ```
 
 But you may also use pip globally:
 ```
-pip install --user git+https://github.com/misterio77/awscli-console
+pip install --user git+https://github.com/zoocha/awscli-console
 ```
 
 You can also use nix, if you're into that:
 ```
-nix shell github:misterio77/awscli-console
+nix shell github:zoocha/awscli-console
 ```
 
 # Usage
