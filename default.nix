@@ -12,7 +12,7 @@ python3Packages.buildPythonApplication rec {
 
   pluginEnv = python3.withPackages (_: propagatedBuildInputs);
   postInstall = ''
-    mkdir -p $out/plugin_path
-    ln -s {$out,$pluginEnv}/lib/python${python3.pythonVersion}/site-packages/* $out/plugin_path/
+    mkdir -p $out/share/aws_plugin_path
+    ln -st $out/share/aws_plugin_path/ {$out,$pluginEnv}/lib/python${python3.pythonVersion}/site-packages/*
   '';
 }

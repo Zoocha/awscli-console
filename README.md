@@ -58,6 +58,7 @@ cli_legacy_plugin_path = path/to/python/site-packages
 The `cli_legacy_plugin_path` will depend on where you installed this.
 - With pipx: `~/.local/share/pipx/venvs/awscli-console/lib/python3.11/site-packages`
 - With pip --user: `~/.local/lib/python3.11/site-packages`
+- With nix: `$outPath/share/aws_plugin_path`
 
 All done! You can use it like so:
 
