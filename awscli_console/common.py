@@ -63,9 +63,7 @@ def get_signin_token(session: Session, duration: int | None = None) -> str:
     req.raise_for_status()
     return json.loads(req.text)["SigninToken"]
 
-def get_login_url(signin_token: str, region: str = "us-east-1", redir: str | None = None) -> str:
-    if redir == None:
-        redir = "https://console.aws.amazon.com"
+def get_login_url(signin_token: str, region: str = "us-east-1", redir: str = "https://console.aws.amazon.com") -> str:
     # Change/add region query string
     parsed_redir = urllib.parse.urlparse(redir)
     query = urllib.parse.parse_qs(parsed_redir.query)
