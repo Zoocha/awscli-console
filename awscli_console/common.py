@@ -70,21 +70,28 @@ def get_login_url(signin_token: str, region: str = "us-east-1", redir: str = "ht
         queries = parse_qs(parsed.query)
         redir = queries.get("redirect_uri", ["https://console.aws.amazon.com"])[0]
 
-    # If we have hashArgs, clean them up
+    # If we have hashArgs somewhere, use them
     if "hashArgs" in redir:
         parsed = urlparse(redir)
         queries = parse_qs(parsed.query)
+        state = queries.pop("state", [None])[0]
         hash_args = queries.pop("hashArgs", [None])[0]
-        if hash_args:
-            redir = parsed._replace(fragment=hash_args.strip("#"), query=urlencode(queries)).geturl()
+        if state and "hashArgs#" in state:
+            redir = parsed._replace(fragment=state.removeprefix("hashArgs#"), query=urlencode(queries)).geturl()
+        elif hash_args and "#" in hash_args:
+            redir = parsed._replace(fragment=hash_args.removeprefix("#"), query=urlencode(queries)).geturl()
 
 
-    # Change/add region query string
     parsed = urlparse(redir)
     queries = parse_qs(parsed.query)
-    queries.update({'region': region})
-    redir = parsed._replace(query=urlencode(queries)).geturl()
 
+    # Change/add region query string
+    queries.update({'region': region})
+    # Cleanup buggy queries
+    queries.pop("state", None)
+    queries.pop("isauthcode", None)
+
+    redir = parsed._replace(query=urlencode(queries)).geturl()
 
     # For some reason, it HAS to be us-east-1
     return "https://us-east-1.signin.aws.amazon.com/federation?" + urlencode({
