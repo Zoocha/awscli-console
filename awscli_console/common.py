@@ -1,5 +1,6 @@
-import json, urllib, requests
+import json, requests, sys
 
+from urllib.parse import parse_qs, urlparse, urlencode
 from botocore.exceptions import SSOTokenLoadError, ProfileNotFound, NoCredentialsError
 from botocore.session import Session
 
@@ -37,7 +38,6 @@ def get_signin_token(session: Session, duration: int | None = None) -> str:
     # Try to get role's duration
     if duration == None:
         duration = get_role_maxduration(session)
-        print("Using max duration from role:", duration)
 
     # Validate bounds
     if duration != None:
@@ -64,24 +64,38 @@ def get_signin_token(session: Session, duration: int | None = None) -> str:
     return json.loads(req.text)["SigninToken"]
 
 def get_login_url(signin_token: str, region: str = "us-east-1", redir: str = "https://console.aws.amazon.com") -> str:
+    # If the redir URL is a signin page, grab its redirect_uri
+    if "signin.aws.amazon.com" in redir:
+        parsed = urlparse(redir)
+        queries = parse_qs(parsed.query)
+        redir = queries.get("redirect_uri", ["https://console.aws.amazon.com"])[0]
+
+    # If we have hashArgs, clean them up
+    if "hashArgs" in redir:
+        parsed = urlparse(redir)
+        queries = parse_qs(parsed.query)
+        hash_args = queries.pop("hashArgs", [None])[0]
+        if hash_args:
+            redir = parsed._replace(fragment=hash_args.strip("#"), query=urlencode(queries)).geturl()
+
+
     # Change/add region query string
-    parsed_redir = urllib.parse.urlparse(redir)
-    query = urllib.parse.parse_qs(parsed_redir.query)
-    query.update({'region': region})
-    encoded_query = urllib.parse.urlencode(query)
-    destination = parsed_redir._replace(query=encoded_query).geturl()
+    parsed = urlparse(redir)
+    queries = parse_qs(parsed.query)
+    queries.update({'region': region})
+    redir = parsed._replace(query=urlencode(queries)).geturl()
 
 
     # For some reason, it HAS to be us-east-1
-    return "https://us-east-1.signin.aws.amazon.com/federation?" + urllib.parse.urlencode({
+    return "https://us-east-1.signin.aws.amazon.com/federation?" + urlencode({
         "Action": "login",
         "Issuer": "aws-switch-role",
-        "Destination": destination,
+        "Destination": redir,
         "SigninToken": signin_token
     })
 
 def get_logout_url(redirect_uri: str) -> str:
-    return "https://signin.aws.amazon.com/oauth?" + urllib.parse.urlencode({
+    return "https://signin.aws.amazon.com/oauth?" + urlencode({
         "Action": "logout",
         "redirect_uri": redirect_uri
     })
