@@ -26,14 +26,14 @@ def main():
 
     if "console.aws.amazon.com" in current_url:
         redir_url = current_url
-        cmd(f":open {logout_url}")
     else:
-        redir_url = f"https://console.aws.amazon.com"
-        cmd(f":open -t {logout_url}")
+        redir_url = None
+
+    cmd(f":open {logout_url}")
 
     session = common.get_session(profile_name)
     signin_token = common.get_signin_token(session)
-    login_url = common.get_login_url(signin_token, session._last_client_region_used)
+    login_url = common.get_login_url(signin_token, session._last_client_region_used, redir_url)
     cmd(f":open {login_url}")
 
 if __name__ == '__main__':

@@ -63,12 +63,20 @@ def get_signin_token(session: Session, duration: int | None = None) -> str:
     req.raise_for_status()
     return json.loads(req.text)["SigninToken"]
 
-def get_login_url(signin_token: str, region: str = "us-east-1") -> str:
+def get_login_url(signin_token: str, region: str = "us-east-1", redir: str = "https://console.aws.amazon.com") -> str:
+    # Change/add region query string
+    parsed_redir = urllib.parse.urlparse(redir)
+    query = urllib.parse.parse_qs(parsed_redir.query)
+    query.update({'region': region})
+    encoded_query = urllib.parse.urlencode(query)
+    destination = parsed_redir._replace(query=encoded_query).geturl()
+
+
     # For some reason, it HAS to be us-east-1
     return "https://us-east-1.signin.aws.amazon.com/federation?" + urllib.parse.urlencode({
         "Action": "login",
         "Issuer": "aws-switch-role",
-        "Destination": f"https://{region}.console.aws.amazon.com",
+        "Destination": destination,
         "SigninToken": signin_token
     })
 
