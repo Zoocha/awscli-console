@@ -1,21 +1,23 @@
-import json, urllib
-import boto3, botocore, requests
+import json, urllib, requests
 
-def get_session(profile_name: str) -> boto3.session.Session:
+from botocore.exceptions import SSOTokenLoadError, ProfileNotFound
+from botocore.session import Session
+
+def get_session(profile_name: str) -> Session:
     try:
-        return boto3.session.Session(profile_name=profile_name)
-    except botocore.exceptions.SSOTokenLoadError as e:
+        return Session(profile=profile_name)
+    except SSOTokenLoadError as e:
         raise Exception("Couldn't find SSO token. Try 'aws sso login'") from e
-    except botocore.exceptions.ProfileNotFound as e:
+    except ProfileNotFound as e:
         raise Exception("Unknown profile. Try 'aws configure list-profiles'") from e
 
-def get_config_duration(session: boto3.session.Session) -> int | None:
-    duration = session._session.get_scoped_config().get('duration_seconds')
+def get_config_duration(session: Session) -> int | None:
+    duration = session.get_scoped_config().get('duration_seconds')
     return int(duration) if duration else None
 
-def get_role_maxduration(session: boto3.session.Session) -> int | None:
-    sts = session.client('sts')
-    iam = session.client('iam')
+def get_role_maxduration(session: Session) -> int | None:
+    sts = session.create_client('sts')
+    iam = session.create_client('iam')
 
     identity = sts.get_caller_identity()['Arn']
     if 'assumed-role' in identity:
@@ -24,13 +26,15 @@ def get_role_maxduration(session: boto3.session.Session) -> int | None:
     else:
         return None
 
-def get_signin_token(session: boto3.session.Session, duration: int | None = None) -> str:
+def get_signin_token(session: Session, duration: int | None = None) -> str:
     # Try to get duration from config
     if duration == None:
         duration = get_config_duration(session)
+        print("Got duration from config:", duration)
     # Try to get role's duration
     if duration == None:
         duration = get_role_maxduration(session)
+        print("Got duration from role:", duration)
 
     # Validate bounds
     if duration != None:

@@ -39,7 +39,7 @@ class Console(awscli.customizations.commands.BasicCommand):
     def _call(self, options, parsed_globals):
         session = common.get_session(parsed_globals.profile)
         signin_token = common.get_signin_token(session)
-        login_url = common.get_login_url(signin_token, session.region_name)
+        login_url = common.get_login_url(signin_token, session._last_client_region_used)
         logout_url = common.get_logout_url(login_url)
 
         print(logout_url)

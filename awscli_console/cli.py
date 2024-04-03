@@ -10,7 +10,7 @@ def main():
 
     session = common.get_session(args.profile)
     signin_token = common.get_signin_token(session, args.duration)
-    login_url = common.get_login_url(signin_token, session.region_name)
+    login_url = common.get_login_url(signin_token, session._last_client_region_used)
     logout_url = common.get_logout_url(login_url)
 
     print(logout_url)

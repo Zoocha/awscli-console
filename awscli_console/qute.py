@@ -33,7 +33,7 @@ def main():
 
     session = common.get_session(profile_name)
     signin_token = common.get_signin_token(session)
-    login_url = common.get_login_url(signin_token, session.region_name)
+    login_url = common.get_login_url(signin_token, session._last_client_region_used)
     cmd(f":open {login_url}")
 
 if __name__ == '__main__':
