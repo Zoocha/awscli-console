@@ -1,6 +1,6 @@
 import json, urllib, requests
 
-from botocore.exceptions import SSOTokenLoadError, ProfileNotFound
+from botocore.exceptions import SSOTokenLoadError, ProfileNotFound, NoCredentialsError
 from botocore.session import Session
 
 def get_session(profile_name: str) -> Session:
@@ -19,7 +19,11 @@ def get_role_maxduration(session: Session) -> int | None:
     sts = session.create_client('sts')
     iam = session.create_client('iam')
 
-    identity = sts.get_caller_identity()['Arn']
+    try:
+        identity = sts.get_caller_identity()['Arn']
+    except (AttributeError, NoCredentialsError) as e:
+        raise Exception("Couldn't extract credentials, try specifying a profile with --profile=foo") from e
+
     if 'assumed-role' in identity:
         role = iam.get_role(RoleName=identity.split('/')[1])['Role']
         return role['MaxSessionDuration']
@@ -30,22 +34,22 @@ def get_signin_token(session: Session, duration: int | None = None) -> str:
     # Try to get duration from config
     if duration == None:
         duration = get_config_duration(session)
-        print("Got duration from config:", duration)
     # Try to get role's duration
     if duration == None:
         duration = get_role_maxduration(session)
-        print("Got duration from role:", duration)
+        print("Using max duration from role:", duration)
 
     # Validate bounds
     if duration != None:
         # For some reason, it sometimes is a non-inclusive limit
-        duration -= 1
+        if duration > 900:
+            duration -= 1
         if duration > 43200 or duration < 900:
             raise Exception("The duration must be between 900s (15 minutes) and 43200s (12 hours).")
 
     try:
         credentials = session.get_credentials().get_frozen_credentials()
-    except AttributeError as e:
+    except (AttributeError, NoCredentialsError) as e:
         raise Exception("Couldn't extract credentials, try specifying a profile with --profile=foo") from e
     req = requests.get("https://signin.aws.amazon.com/federation", params={
         "Action": "getSigninToken",
